@@ -1,65 +1,276 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useEffect, useState, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { PlusCircle, Search, GraduationCap, Users, Sparkles } from 'lucide-react';
+import { Alumni } from '@/types/alumni';
+import AlumniCard from '@/components/gallery/AlumniCard';
+import AlumniDetailModal from '@/components/gallery/AlumniDetailModal';
+import SubmissionModal from '@/components/gallery/SubmissionModal';
+import BackgroundOrbs from '@/components/ui/BackgroundOrbs';
+
+export default function GalleryPage() {
+  const [alumni, setAlumni] = useState<Alumni[]>([]);
+  const [filtered, setFiltered] = useState<Alumni[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedAlumni, setSelectedAlumni] = useState<Alumni | null>(null);
+  const [showSubmission, setShowSubmission] = useState(false);
+  const [search, setSearch] = useState('');
+  const [filterYear, setFilterYear] = useState('');
+
+  const fetchAlumni = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/alumni');
+      const data = await res.json();
+      setAlumni(data.alumni || []);
+    } catch {
+      setAlumni([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAlumni();
+  }, [fetchAlumni]);
+
+  useEffect(() => {
+    let result = alumni;
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        a =>
+          a.name.toLowerCase().includes(q) ||
+          a.department?.toLowerCase().includes(q) ||
+          a.current_role?.toLowerCase().includes(q) ||
+          a.current_company?.toLowerCase().includes(q)
+      );
+    }
+    if (filterYear) {
+      result = result.filter(a => String(a.batch_year) === filterYear);
+    }
+    setFiltered(result);
+  }, [alumni, search, filterYear]);
+
+  const uniqueYears = [...new Set(alumni.map(a => a.batch_year))].sort((a, b) => b - a);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="relative min-h-screen" style={{ background: '#06080f' }}>
+      <BackgroundOrbs />
+
+      <div className="relative z-10">
+        {/* Header */}
+        <header className="px-6 pt-10 pb-8 max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <div
+                className="px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5"
+                style={{
+                  background: 'rgba(201,168,76,0.1)',
+                  border: '1px solid rgba(201,168,76,0.25)',
+                  color: '#c9a84c',
+                  fontFamily: 'Outfit, sans-serif',
+                }}
+              >
+                <Sparkles size={10} />
+                KLE University
+              </div>
+            </div>
+
+            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+              <div>
+                <h1
+                  className="text-5xl md:text-6xl font-extrabold leading-tight"
+                  style={{ fontFamily: 'Outfit, sans-serif' }}
+                >
+                  <span style={{ color: '#e8eaf0' }}>Alumni</span>
+                  <br />
+                  <span
+                    style={{
+                      background: 'linear-gradient(135deg, #c9a84c, #f0d080, #c9a84c)',
+                      backgroundSize: '200% auto',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      backgroundClip: 'text',
+                    }}
+                  >
+                    Legacy
+                  </span>
+                </h1>
+                <p className="mt-3 text-base max-w-md" style={{ color: 'rgba(232,234,240,0.5)', fontFamily: 'Inter, sans-serif' }}>
+                  A timeless digital yearbook celebrating the brilliant minds that shaped KLE&apos;s legacy.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div
+                  className="px-4 py-2.5 rounded-2xl text-center"
+                  style={{
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.07)',
+                  }}
+                >
+                  <div className="text-2xl font-bold" style={{ fontFamily: 'Outfit, sans-serif', color: '#f0d080' }}>
+                    {alumni.length}
+                  </div>
+                  <div className="text-xs flex items-center gap-1" style={{ color: 'rgba(232,234,240,0.4)' }}>
+                    <Users size={10} />
+                    Alumni
+                  </div>
+                </div>
+                <div
+                  className="px-4 py-2.5 rounded-2xl text-center"
+                  style={{
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.07)',
+                  }}
+                >
+                  <div className="text-2xl font-bold" style={{ fontFamily: 'Outfit, sans-serif', color: '#7ab8f5' }}>
+                    {uniqueYears.length}
+                  </div>
+                  <div className="text-xs flex items-center gap-1" style={{ color: 'rgba(232,234,240,0.4)' }}>
+                    <GraduationCap size={10} />
+                    Batches
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Search & Filter */}
+            <div className="mt-7 flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search
+                  size={15}
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{ color: 'rgba(232,234,240,0.3)' }}
+                />
+                <input
+                  className="input-elegant pl-10 pr-4 py-3 text-sm"
+                  placeholder="Search by name, department, company…"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                />
+              </div>
+              <select
+                className="input-elegant px-4 py-3 text-sm sm:w-44 appearance-none cursor-pointer"
+                value={filterYear}
+                onChange={e => setFilterYear(e.target.value)}
+              >
+                <option value="" style={{ background: '#08090e' }}>All Batches</option>
+                {uniqueYears.map(y => (
+                  <option key={y} value={String(y)} style={{ background: '#08090e' }}>{y}</option>
+                ))}
+              </select>
+            </div>
+          </motion.div>
+        </header>
+
+        {/* Gold divider */}
+        <div
+          className="mx-6 mb-8 h-px"
+          style={{
+            maxWidth: 'calc(100% - 3rem)',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+            background: 'linear-gradient(90deg, transparent, rgba(201,168,76,0.3), transparent)',
+          }}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+
+        {/* Gallery grid */}
+        <main className="px-6 pb-32 max-w-7xl mx-auto">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-24 gap-4">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
+                className="w-10 h-10 rounded-full"
+                style={{ border: '2px solid rgba(201,168,76,0.15)', borderTopColor: '#c9a84c' }}
+              />
+              <p className="text-sm" style={{ color: 'rgba(232,234,240,0.4)' }}>Loading alumni gallery…</p>
+            </div>
+          ) : filtered.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex flex-col items-center justify-center py-24 gap-4 text-center"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center"
+                style={{
+                  background: 'rgba(201,168,76,0.06)',
+                  border: '1px solid rgba(201,168,76,0.15)',
+                }}
+              >
+                <GraduationCap size={28} style={{ color: 'rgba(201,168,76,0.5)' }} />
+              </div>
+              <p className="text-base font-medium" style={{ color: 'rgba(232,234,240,0.5)' }}>
+                {alumni.length === 0 ? 'No alumni yet. Be the first!' : 'No results found.'}
+              </p>
+              {alumni.length === 0 && (
+                <button
+                  onClick={() => setShowSubmission(true)}
+                  className="btn-gold px-5 py-2.5 text-sm mt-2"
+                >
+                  Add Your Legacy
+                </button>
+              )}
+            </motion.div>
+          ) : (
+            <AnimatePresence>
+              <div
+                className="grid gap-5"
+                style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}
+              >
+                {filtered.map((a, i) => (
+                  <AlumniCard
+                    key={a.id}
+                    alumni={a}
+                    index={i}
+                    onClick={setSelectedAlumni}
+                  />
+                ))}
+              </div>
+            </AnimatePresence>
+          )}
+        </main>
+      </div>
+
+      {/* FAB */}
+      <motion.button
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.8, type: 'spring', stiffness: 200 }}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => setShowSubmission(true)}
+        className="fixed bottom-8 right-8 z-40 flex items-center gap-2.5 px-5 py-3.5 rounded-2xl shadow-2xl"
+        style={{
+          background: 'linear-gradient(135deg, #c9a84c, #f0d080)',
+          color: '#06080f',
+          fontFamily: 'Outfit, sans-serif',
+          fontWeight: 700,
+          fontSize: 14,
+          boxShadow: '0 8px 32px rgba(201,168,76,0.35), 0 0 0 1px rgba(201,168,76,0.2)',
+        }}
+      >
+        <PlusCircle size={18} />
+        Leave Your Mark
+      </motion.button>
+
+      <AlumniDetailModal
+        alumni={selectedAlumni}
+        onClose={() => setSelectedAlumni(null)}
+      />
+      <SubmissionModal
+        isOpen={showSubmission}
+        onClose={() => setShowSubmission(false)}
+        onSuccess={fetchAlumni}
+      />
     </div>
   );
 }
