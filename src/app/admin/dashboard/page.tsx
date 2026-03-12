@@ -42,7 +42,8 @@ export default function AdminDashboard() {
         router.push('/admin/login');
         return;
       }
-      const data = await res.json();
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
       setSubmissions(data.submissions || []);
       setSelected(data.submissions?.[0] || null);
     } catch {
@@ -52,12 +53,17 @@ export default function AdminDashboard() {
     }
   }, [router]);
 
+  const safeJson = async (res: Response) => {
+    const text = await res.text();
+    return text ? JSON.parse(text) : {};
+  };
+
   const fetchCounts = useCallback(async () => {
     try {
       const [p, a, r] = await Promise.all([
-        fetch('/api/admin/submissions?status=pending').then(r => r.json()),
-        fetch('/api/admin/submissions?status=approved').then(r => r.json()),
-        fetch('/api/admin/submissions?status=rejected').then(r => r.json()),
+        fetch('/api/admin/submissions?status=pending').then(safeJson),
+        fetch('/api/admin/submissions?status=approved').then(safeJson),
+        fetch('/api/admin/submissions?status=rejected').then(safeJson),
       ]);
       setCounts({
         pending: p.submissions?.length ?? 0,
@@ -86,8 +92,9 @@ export default function AdminDashboard() {
         body: JSON.stringify({ id, action }),
       });
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error);
+        const text = await res.text();
+        const data = text ? JSON.parse(text) : {};
+        throw new Error(data.error || `Error ${res.status}`);
       }
       showToast(action === 'approve' ? 'Alumni approved and published!' : 'Submission rejected.', 'success');
       setSubmissions(prev => {

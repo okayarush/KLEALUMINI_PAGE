@@ -14,6 +14,7 @@ type Step = 1 | 2 | 3 | 4;
 
 const DEPARTMENTS = [
   'Computer Science & Engineering',
+  'Computer Science & Engineering (AI)',
   'Electronics & Communication',
   'Mechanical Engineering',
   'Civil Engineering',
@@ -90,6 +91,11 @@ export default function SubmissionModal({ isOpen, onClose, onSuccess }: Submissi
       else if (Number(form.batch_year) < 1960 || Number(form.batch_year) > new Date().getFullYear())
         newErrors.batch_year = 'Enter a valid year.';
     }
+    if (s === 3) {
+      if (form.linkedin_url && !form.linkedin_url.startsWith('https://')) {
+        newErrors.linkedin_url = 'LinkedIn URL must start with https://';
+      }
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }
@@ -138,8 +144,16 @@ export default function SubmissionModal({ isOpen, onClose, onSuccess }: Submissi
       if (form.image) fd.append('image', form.image);
 
       const res = await fetch('/api/alumni', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Submission failed.');
+
+      // Safely parse JSON — empty body will throw, so we catch that
+      let data: { error?: string } = {};
+      try {
+        data = await res.json();
+      } catch {
+        if (!res.ok) throw new Error(`Server error (${res.status})`);
+      }
+
+      if (!res.ok) throw new Error(data.error || `Server error (${res.status})`);
       setSubmitted(true);
       setTimeout(() => {
         onSuccess();
@@ -154,7 +168,6 @@ export default function SubmissionModal({ isOpen, onClose, onSuccess }: Submissi
   }
 
   const canProceed = step < 4;
-  const isLastStep = step === 4;
 
   return (
     <AnimatePresence>
@@ -331,7 +344,6 @@ export default function SubmissionModal({ isOpen, onClose, onSuccess }: Submissi
                   )}
                 </AnimatePresence>
 
-                {/* Error message */}
                 {errors.submit && (
                   <p className="text-xs mt-3 text-red-400 text-center">{errors.submit}</p>
                 )}
@@ -391,14 +403,27 @@ export default function SubmissionModal({ isOpen, onClose, onSuccess }: Submissi
 
 // ---- Sub-steps ----
 
-interface FormProps {
-  form: ReturnType<typeof useState<{ name: string; batch_year: string; department: string; description: string; quote: string; current_role: string; current_company: string; linkedin_url: string; image: File | null }>>[0];
-  errors: Record<string, string>;
-  update: (k: string, v: string) => void;
-}
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function StepOne({ form, errors, update }: any) {
+  // Track what's selected in the dropdown separately from the final department value
+  const presetDepts = DEPARTMENTS.filter(d => d !== 'Other');
+  const initialSelect = presetDepts.includes(form.department)
+    ? form.department
+    : form.department
+      ? 'Other'
+      : '';
+  const [selectVal, setSelectVal] = useState(initialSelect);
+
+  function handleSelectChange(val: string) {
+    setSelectVal(val);
+    if (val !== 'Other') {
+      update('department', val);
+    } else {
+      // Clear department until they type their custom value
+      update('department', '');
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
@@ -420,6 +445,7 @@ function StepOne({ form, errors, update }: any) {
         />
         {errors.name && <p className="text-xs mt-1 text-red-400">{errors.name}</p>}
       </div>
+
       <div>
         <label className="block text-xs font-medium mb-1.5" style={{ color: 'rgba(201,168,76,0.8)' }}>
           Batch Year <span style={{ color: '#f56565' }}>*</span>
@@ -435,14 +461,15 @@ function StepOne({ form, errors, update }: any) {
         />
         {errors.batch_year && <p className="text-xs mt-1 text-red-400">{errors.batch_year}</p>}
       </div>
+
       <div>
         <label className="block text-xs font-medium mb-1.5" style={{ color: 'rgba(201,168,76,0.8)' }}>
           Department
         </label>
         <select
           className="input-elegant px-4 py-3 text-sm appearance-none"
-          value={form.department}
-          onChange={e => update('department', e.target.value)}
+          value={selectVal}
+          onChange={e => handleSelectChange(e.target.value)}
           style={{ cursor: 'pointer' }}
         >
           <option value="" style={{ background: '#08090e' }}>Select department…</option>
@@ -450,6 +477,27 @@ function StepOne({ form, errors, update }: any) {
             <option key={d} value={d} style={{ background: '#08090e' }}>{d}</option>
           ))}
         </select>
+
+        {/* Custom department input — shown when "Other" is selected */}
+        <AnimatePresence>
+          {selectVal === 'Other' && (
+            <motion.div
+              initial={{ opacity: 0, height: 0, marginTop: 0 }}
+              animate={{ opacity: 1, height: 'auto', marginTop: 8 }}
+              exit={{ opacity: 0, height: 0, marginTop: 0 }}
+              transition={{ duration: 0.2 }}
+              style={{ overflow: 'hidden' }}
+            >
+              <input
+                className="input-elegant px-4 py-3 text-sm"
+                placeholder="Enter your department name…"
+                value={form.department}
+                onChange={e => update('department', e.target.value)}
+                autoFocus
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   );
@@ -496,6 +544,8 @@ function StepTwo({ form, errors, update }: any) {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function StepThree({ form, errors, update }: any) {
+  const linkedinOk = !form.linkedin_url || form.linkedin_url.startsWith('https://');
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
@@ -516,6 +566,7 @@ function StepThree({ form, errors, update }: any) {
           autoFocus
         />
       </div>
+
       <div>
         <label className="block text-xs font-medium mb-1.5" style={{ color: 'rgba(201,168,76,0.8)' }}>
           Company / Organization
@@ -527,18 +578,50 @@ function StepThree({ form, errors, update }: any) {
           onChange={e => update('current_company', e.target.value)}
         />
       </div>
+
       <div>
         <label className="block text-xs font-medium mb-1.5" style={{ color: 'rgba(201,168,76,0.8)' }}>
           LinkedIn Profile
         </label>
-        <input
-          className="input-elegant px-4 py-3 text-sm"
-          placeholder="https://linkedin.com/in/your-profile"
-          type="url"
-          value={form.linkedin_url}
-          onChange={e => update('linkedin_url', e.target.value)}
-        />
-        {errors.linkedin_url && <p className="text-xs mt-1 text-red-400">{errors.linkedin_url}</p>}
+        <div className="relative">
+          <input
+            className="input-elegant px-4 py-3 text-sm pr-24"
+            placeholder="https://linkedin.com/in/yourname"
+            value={form.linkedin_url}
+            onChange={e => update('linkedin_url', e.target.value)}
+            style={{
+              borderColor: errors.linkedin_url
+                ? 'rgba(252,129,129,0.5)'
+                : form.linkedin_url && !linkedinOk
+                  ? 'rgba(252,129,129,0.4)'
+                  : undefined,
+            }}
+          />
+          {/* Live preview link — only shows when URL is valid */}
+          {form.linkedin_url && linkedinOk && (
+            <a
+              href={form.linkedin_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-lg transition-all hover:scale-105"
+              style={{
+                background: 'rgba(74,144,217,0.12)',
+                border: '1px solid rgba(74,144,217,0.25)',
+                color: '#7ab8f5',
+                textDecoration: 'none',
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              Open ↗
+            </a>
+          )}
+        </div>
+        <p className="text-xs mt-1.5" style={{ color: 'rgba(232,234,240,0.3)' }}>
+          Must start with <span style={{ color: 'rgba(201,168,76,0.6)' }}>https://</span>
+        </p>
+        {errors.linkedin_url && (
+          <p className="text-xs mt-1 text-red-400">{errors.linkedin_url}</p>
+        )}
       </div>
     </motion.div>
   );

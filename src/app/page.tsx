@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PlusCircle, Search, GraduationCap, Users, Sparkles } from 'lucide-react';
+import { Search, GraduationCap, Users, Sparkles } from 'lucide-react';
 import { Alumni } from '@/types/alumni';
 import AlumniCard from '@/components/gallery/AlumniCard';
 import AlumniDetailModal from '@/components/gallery/AlumniDetailModal';
@@ -22,7 +22,8 @@ export default function GalleryPage() {
     setLoading(true);
     try {
       const res = await fetch('/api/alumni');
-      const data = await res.json();
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
       setAlumni(data.alumni || []);
     } catch {
       setAlumni([]);
@@ -59,7 +60,7 @@ export default function GalleryPage() {
     <div className="relative min-h-screen" style={{ background: '#06080f' }}>
       <BackgroundOrbs />
 
-      <div className="relative z-10">
+      <div className="relative z-10 flex flex-col min-h-screen">
         {/* Header */}
         <header className="px-6 pt-10 pb-8 max-w-7xl mx-auto">
           <motion.div
@@ -78,7 +79,7 @@ export default function GalleryPage() {
                 }}
               >
                 <Sparkles size={10} />
-                KLE University
+                KLE Technological University | HUBLI
               </div>
             </div>
 
@@ -182,7 +183,7 @@ export default function GalleryPage() {
         />
 
         {/* Gallery grid */}
-        <main className="px-6 pb-32 max-w-7xl mx-auto">
+        <main className="flex-1 px-6 pb-32 max-w-7xl mx-auto w-full">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-24 gap-4">
               <motion.div
@@ -238,31 +239,10 @@ export default function GalleryPage() {
             </AnimatePresence>
           )}
         </main>
+
       </div>
 
-      {/* FAB */}
-      <motion.button
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.8, type: 'spring', stiffness: 200 }}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => setShowSubmission(true)}
-        className="fixed bottom-8 right-8 z-40 flex items-center gap-2.5 px-5 py-3.5 rounded-2xl shadow-2xl"
-        style={{
-          background: 'linear-gradient(135deg, #c9a84c, #f0d080)',
-          color: '#06080f',
-          fontFamily: 'Outfit, sans-serif',
-          fontWeight: 700,
-          fontSize: 14,
-          boxShadow: '0 8px 32px rgba(201,168,76,0.35), 0 0 0 1px rgba(201,168,76,0.2)',
-        }}
-      >
-        <PlusCircle size={18} />
-        Leave Your Mark
-      </motion.button>
-
-      <AlumniDetailModal
+<AlumniDetailModal
         alumni={selectedAlumni}
         onClose={() => setSelectedAlumni(null)}
       />
