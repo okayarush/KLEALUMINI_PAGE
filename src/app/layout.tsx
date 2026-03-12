@@ -25,22 +25,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        <img
-          src="/images/favicon.png"
-          alt="KLE Alumni"
-          style={{
-            position: 'fixed',
-            bottom: 23,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: 244,
-            height: 244,
-            zIndex: 9998,
-            objectFit: 'contain',
-            opacity: 0.95,
-            mixBlendMode: 'screen',
-          }}
-        />
         {children}
         <div
           style={{
@@ -48,29 +32,49 @@ export default function RootLayout({
             bottom: 0,
             left: 0,
             right: 0,
-            textAlign: "center",
-            padding: "6px 0 8px",
-            fontSize: 11,
-            fontFamily: "Inter, sans-serif",
-            color: "rgba(232,234,240,0.38)",
-            pointerEvents: "none",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
             zIndex: 9999,
-            letterSpacing: "0.02em",
+            pointerEvents: "none",
           }}
         >
-          <a
-            href={_b}
-            target="_blank"
-            rel="noopener noreferrer"
+          <img
+            src="/images/favicon.png"
+            alt="KLE Alumni"
             style={{
-              color: "inherit",
-              textDecoration: "none",
-              pointerEvents: "auto",
+              width: 244,
+              objectFit: 'contain',
+              opacity: 0.95,
+              mixBlendMode: 'screen',
+              display: 'block',
+              marginBottom: -47,
+            }}
+          />
+          <div
+            style={{
+              textAlign: "center",
+              padding: "0 0 8px",
+              fontSize: 11,
+              fontFamily: "Inter, sans-serif",
+              color: "rgba(232,234,240,0.38)",
+              letterSpacing: "0.02em",
             }}
           >
-            Crafted by <span style={{ color: "rgba(201,168,76,0.65)", fontWeight: 500 }}>{_a}</span>
-            {" \u00b7 "}{_c}
-          </a>
+            <a
+              href={_b}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: "inherit",
+                textDecoration: "none",
+                pointerEvents: "auto",
+              }}
+            >
+              Crafted by <span style={{ color: "rgba(201,168,76,0.65)", fontWeight: 500 }}>{_a}</span>
+              {" \u00b7 "}{_c}
+            </a>
+          </div>
         </div>
       </body>
     </html>
